@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 from streamlit.testing.v1 import AppTest
-from engine import new_round, respond, guidance, is_complete, checkpoint, restore_checkpoint, MENU, TOPPINGS, recipe_message, CUSTOMERS, matches_customer, bot_instructions
+from engine import new_round, respond, guidance, is_complete, checkpoint, restore_checkpoint, MENU, TOPPINGS, recipe_message, CUSTOMERS, matches_customer, bot_instructions, conferbot_prompt
 
 class ArcadeTests(unittest.TestCase):
     def boot(self):
@@ -16,7 +16,7 @@ class ArcadeTests(unittest.TestCase):
         at=self.boot()
         self.assertTrue(at.button(key='nav1').disabled)
         self.assertEqual(len(at.radio),0)
-        self.assertFalse(any('Voiceflow' in m.value for m in at.markdown))
+        self.assertFalse(any('Open Conferbot and start your bot' in m.value for m in at.markdown))
         self.click(at,'Send: Can I get a milk tea please?')
         self.click(at,'Send: order milk tea')
         self.click(at,'Next: Stage 2 →')
@@ -33,10 +33,10 @@ class ArcadeTests(unittest.TestCase):
         self.click(at,'Send: Can I get a durian milkshake?');self.click(at,'Finish the game →')
         self.assertEqual(at.session_state['completed'],[0,1,2,3])
         self.assertTrue(any('All four stages complete' in m.value for m in at.success))
-        self.assertFalse(any('Meet Voiceflow' in m.value for m in at.markdown))
-        self.click(at,'Reveal the next step')
-        self.assertTrue(any('Meet Voiceflow' in m.value for m in at.markdown))
-        self.assertIn('Toppings:',at.code[0].value)
+        self.assertFalse(any('Open Conferbot and start your bot' in m.value for m in at.markdown))
+        self.click(at,'Show my Conferbot starter prompt')
+        self.assertTrue(any('Open Conferbot and start your bot' in m.value for m in at.markdown))
+        self.assertIn('bubble tea',at.code[0].value)
         saved=checkpoint(at.session_state['completed'],at.session_state['stage'])
         self.assertEqual(restore_checkpoint(saved),([0,1,2,3],4))
         self.click(at,'Replay from stage 1');self.click(at,'Restart this stage')
@@ -119,13 +119,20 @@ class ArcadeTests(unittest.TestCase):
         self.assertIn(at.session_state['counter']['state']['order']['drink'],MENU)
         at.text_input(key='bot_name').set_value('Pearl Patrol').run()
         at.selectbox(key='bot_tone').set_value('Deadpan').run()
-        self.click(at,'Reveal the next step')
+        self.click(at,'Show my Conferbot starter prompt')
         self.assertIn('Pearl Patrol',at.code[0].value)
-        self.assertIn('Deadpan',at.code[0].value)
-        self.assertIn('Maximum two',at.code[0].value)
+        self.assertIn('deadpan',at.code[0].value)
+        self.assertLess(len(at.code[0].value),900)
         self.click(at,'Next customer')
         self.assertEqual(at.session_state['counter']['state']['order'],{})
         self.assertEqual(at.session_state['served'],[0])
+    def test_conferbot_prompt_is_short_and_has_expected_options(self):
+        prompt=conferbot_prompt('Pearl Patrol','Deadpan')
+        self.assertLessEqual(len(prompt),900)
+        self.assertIn('Pearl Patrol',prompt)
+        self.assertIn('pretend order',prompt)
+        self.assertIn('25%',prompt)
+        self.assertNotIn('Voiceflow',prompt)
     def test_clean_package_text(self):
         for p in Path(__file__).parent.rglob('*'):
             if p.is_file() and p.suffix in ['.py','.md','.toml','.txt']:

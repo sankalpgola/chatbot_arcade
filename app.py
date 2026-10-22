@@ -5,9 +5,9 @@ st.set_page_config(page_title='Chatbot Arcade | TP Applied AI',page_icon='💬',
 st.markdown('''<style>
 .block-container{max-width:1100px;padding-top:2rem;padding-bottom:2rem}
 h1{letter-spacing:-.045em}h2,h3{letter-spacing:-.025em}
-[data-testid="stChatMessage"]{border:1px solid #dce5df;border-radius:14px}
+[data-testid="stChatMessage"]{border:1px solid #dce7f4;border-radius:14px}
 .stButton>button{border-radius:10px;min-height:44px}
-.kicker{font-size:.75rem;letter-spacing:.14em;color:#397357;font-weight:700}
+.kicker{font-size:.75rem;letter-spacing:.14em;color:#2F6FC5;font-weight:700}
 </style>''',unsafe_allow_html=True)
 s=st.session_state
 for key,value in {'stage':0,'completed':[],'rounds':{},'notice':None}.items():
@@ -40,9 +40,10 @@ def replay():
     s.notice='This stage has restarted. Previously earned stamps are kept.'
 def reset_all():s.clear()
 
-st.markdown('<div class="kicker">TEMASEK POLYTECHNIC · APPLIED AI</div>',unsafe_allow_html=True)
-st.title('Fix the bubble-tea bot')
-st.write('Repair Sip Bot in four stages, then unlock your own BBT counter. Six flavours, five toppings and plenty of combinations to try. Play in pairs and swap who types after each stage.')
+st.markdown('<div class="kicker">TEMASEK POLYTECHNIC · SCHOOL OF INFORMATICS & IT · APPLIED AI</div>',unsafe_allow_html=True)
+st.title('Chatbot Arcade: Fix Sip Bot')
+st.write('Four short challenges, then your own bubble-tea counter. Work with your partner on one laptop. Swap who controls the keyboard after each stage.')
+st.caption('DAY 1 · 26 OCTOBER 2026 · Suggested play time: 25–30 minutes. The drinks counter at the end is optional if you need more time in Conferbot.')
 nav=st.columns(4)
 for n,col in enumerate(nav):
     with col:
@@ -77,7 +78,7 @@ with st.sidebar:
         checked=st.checkbox('Clear every stage and stamp')
         st.button('Confirm full restart',disabled=not checked,on_click=reset_all)
 if s.stage==4:
-    st.success('You repaired Sip Bot. All four stages complete!')
+    st.success('Sip Bot is fixed. All four stages complete!')
     render_freeplay()
     with st.expander('Your four discoveries'):
         for n in range(4):st.write(f'{n+1}. '+LESSONS[n])
@@ -137,4 +138,4 @@ else:
     if complete or n in s.completed:
         st.button('Finish the game →' if n==3 else f'Next: Stage {n+2} →',type='primary',width='stretch',on_click=go,args=(n+1,))
         if not complete:st.caption('You already completed this stage earlier, so you can continue or finish the replay.')
-st.caption('Fictional drinks only. No real orders or payments. No speed score: explain your discovery to your partner.')
+st.caption('Practice game only. No real orders, payments or customer data. There is no speed score.')

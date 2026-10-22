@@ -2,7 +2,7 @@
 import random
 from html import escape
 import streamlit as st
-from engine import MENU, TOPPINGS, SIZES, SUGARS, ICE, CUSTOMERS, fresh, respond, summary, recipe_message, matches_customer, bot_instructions
+from engine import MENU, TOPPINGS, SIZES, SUGARS, ICE, CUSTOMERS, fresh, respond, summary, recipe_message, matches_customer, bot_instructions, conferbot_prompt
 
 TONES=['Friendly','Deadpan','Sports commentator','Dramatic']
 COLORS={'milk tea':'#C49A6C','lychee tea':'#E8A6AD','lemon tea':'#EDCF68','taro milk tea':'#AD8BC9','matcha milk tea':'#8BAC73','brown sugar milk tea':'#9F714D'}
@@ -125,15 +125,25 @@ def render_freeplay():
         st.text_input('Write your own counter message',key='counter_draft',max_chars=300,placeholder='Try: add pudding, or change to taro milk tea')
         st.form_submit_button('Send to counter',on_click=counter_draft,width='stretch')
     st.divider()
-    st.subheader('Ready to make a chatbot of your own?')
-    if st.button('Reveal the next step',type='primary'):s.reveal_next=True
+    st.subheader('Next stop: Conferbot')
+    st.write('In the arcade, you found bugs in a pretend bot. In Conferbot, you will build the actual conversation flow. Take a starter prompt with you, then edit the choices and test each branch.')
+    if st.button('Show my Conferbot starter prompt',type='primary'):
+        s.reveal_next=True
     if s.reveal_next:
-        st.markdown('### Meet Voiceflow')
-        st.write('You have been playing with a rule-based chatbot. Voiceflow lets you create an AI chatbot that responds to more varied messages. Take the same menu, memory and clarification rules with you.')
-        prompt=bot_instructions(s.bot_name or 'Sip Bot',s.bot_tone)
-        st.write('**For later:** use the copy icon in the top-right of the instructions box, or download the text file. Your chosen bot name and reply style are included.')
-        st.code(prompt,language=None)
-        st.download_button('Download my chatbot instructions',prompt,'my-bbt-chatbot-instructions.txt','text/plain')
-        st.link_button('Open Voiceflow when your lecturer says to start','https://creator.voiceflow.com/')
-        st.markdown('1. Sign in using your lecturer’s account instructions.\n2. Create a project and choose **Start from scratch**.\n3. Paste the instructions into the **Global agent description / prompt**.\n4. Test a drink order, then change only the sugar or a topping. Check that the other choices remain.')
-        st.caption('Voiceflow is a separate service with account and usage limits. Your lecturer will guide the setup. The game does not need it.')
+        st.markdown('### Open Conferbot and start your bot')
+        short_prompt=conferbot_prompt(s.bot_name or 'Sip Bot',s.bot_tone)
+        st.write('Copy this short description into **Create Your First Bot → Describe It** (or **Build with AI → Describe It**, depending on the screen).')
+        st.code(short_prompt,language=None)
+        st.caption(f'{len(short_prompt)} characters. Designed to fit a short description field; check the limit shown in Conferbot.')
+        st.download_button('Save my Conferbot prompt',short_prompt,'conferbot-starter-prompt.txt','text/plain')
+        st.link_button('Open Conferbot','https://www.conferbot.com/')
+        st.markdown("""**What to do next**
+1. Work with your partner on **one laptop** and open Conferbot.
+2. Choose **Create Your First Bot**, then **Describe It** (or the equivalent **Build with AI** option).
+3. Paste the short prompt, generate the chatbot and open the visual flow builder.
+4. Check the drink choices, sugar, ice and size. Use **Preview** to test an order and a changed answer.
+5. Continue with the Day 1 worksheet. Do not enter personal details or use real payment steps.""")
+        with st.expander('More detailed rules if your bot needs fixing'):
+            st.caption('Use these as a checklist for editing nodes and choices. You do not need to paste this whole section into the description field.')
+            st.code(bot_instructions(s.bot_name or 'Sip Bot',s.bot_tone),language=None)
+        st.caption('Conferbot is a separate website. The Streamlit arcade works without an account or AI API.')

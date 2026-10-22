@@ -204,3 +204,22 @@ User: Remove pearls.
 User: Confirm.
 The final order must keep large taro milk tea, 25% sugar, no ice, pudding only.
 '''
+
+
+def conferbot_prompt(name,tone):
+    """A short description for Conferbot's Describe It field (max 900 chars)."""
+    bot_name=(name or 'Sip Bot').strip()[:30]
+    style=tone if tone in {'Friendly','Deadpan','Sports commentator','Dramatic'} else 'Friendly'
+    prompt=(
+        f'Create a fictional bubble tea ordering chatbot called {bot_name}. '
+        f'Use a {style.lower()} tone and short, clear messages. '
+        'Show choices for 6 drinks: milk tea, taro milk tea, matcha milk tea, brown sugar milk tea, lychee tea and lemon tea. '
+        'Ask for cup size (regular or large), sugar (0%, 25%, 50%, 75%, 100%) and ice (normal, less, none or extra). '
+        'Offer toppings: pearls, pudding, grass jelly, aloe vera or coconut jelly; allow up to two. '
+        'Show an order summary before confirmation, with an option to change choices. '
+        'Do not accept items outside this menu. If a choice is unclear, ask the customer instead of guessing. '
+        'Do not ask for personal information or real payment. End by confirming it is only a pretend order.'
+    )
+    if len(prompt)>900:
+        raise ValueError('Conferbot prompt unexpectedly exceeded 900 characters')
+    return prompt
