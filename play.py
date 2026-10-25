@@ -126,24 +126,6 @@ def render_freeplay():
         st.form_submit_button('Send to counter',on_click=counter_draft,width='stretch')
     st.divider()
     st.subheader('Next stop: Conferbot')
-    st.write('In the arcade, you found bugs in a pretend bot. In Conferbot, you will build the actual conversation flow. Take a starter prompt with you, then edit the choices and test each branch.')
-    if st.button('Show my Conferbot starter prompt',type='primary'):
-        s.reveal_next=True
-    if s.reveal_next:
-        st.markdown('### Open Conferbot and start your bot')
-        short_prompt=conferbot_prompt(s.bot_name or 'Sip Bot',s.bot_tone)
-        st.write('Copy this short description into **Create Your First Bot → Describe It** (or **Build with AI → Describe It**, depending on the screen).')
-        st.code(short_prompt,language=None)
-        st.caption(f'{len(short_prompt)} characters. Designed to fit a short description field; check the limit shown in Conferbot.')
-        st.download_button('Save my Conferbot prompt',short_prompt,'conferbot-starter-prompt.txt','text/plain')
-        st.link_button('Open Conferbot','https://www.conferbot.com/')
-        st.markdown("""**What to do next**
-1. Work with your partner on **one laptop** and open Conferbot.
-2. Choose **Create Your First Bot**, then **Describe It** (or the equivalent **Build with AI** option).
-3. Paste the short prompt, generate the chatbot and open the visual flow builder.
-4. Check the drink choices, sugar, ice and size. Use **Preview** to test an order and a changed answer.
-5. Continue with the Day 1 worksheet. Do not enter personal details or use real payment steps.""")
-        with st.expander('More detailed rules if your bot needs fixing'):
-            st.caption('Use these as a checklist for editing nodes and choices. You do not need to paste this whole section into the description field.')
-            st.code(bot_instructions(s.bot_name or 'Sip Bot',s.bot_tone),language=None)
-        st.caption('Conferbot is a separate website. The Streamlit arcade works without an account or AI API.')
+    st.write('You have inspected four simplified rules. Now open Conferbot, follow the Day 1 worksheet and make your own node and connection.')
+    st.info('IMPORTANT: The free-play counter has six flavours and regular/large cups. The guided Day 1 Conferbot worksheet uses five drinks and three cup sizes. Follow the worksheet specification when generating your bot.')
+    st.link_button('Open Conferbot', 'https://www.conferbot.com/')

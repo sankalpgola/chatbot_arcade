@@ -7,6 +7,8 @@ class Smoke(unittest.TestCase):
         r = new_round(0)
         for phrase in ['Can I get a milk tea please?', 'order milk tea']:
             _,r['state'] = respond(phrase,r['state'],0,r['repaired'])
+        r['repaired']=True
+        _,r['state']=respond('Can I get a milk tea please?',r['state'],0,r['repaired'])
         self.assertTrue(is_complete(0,r))
         for stage in [1,2,3]:
             r=new_round(stage)

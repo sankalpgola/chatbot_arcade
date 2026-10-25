@@ -1,141 +1,168 @@
-import streamlit as st
-from play import render_freeplay, render_menu
-from engine import TITLES, LESSONS, new_round, respond, guidance, is_complete, checkpoint, restore_checkpoint
-st.set_page_config(page_title='Chatbot Arcade | TP Applied AI',page_icon='💬',layout='wide')
-st.markdown('''<style>
-.block-container{max-width:1100px;padding-top:2rem;padding-bottom:2rem}
-h1{letter-spacing:-.045em}h2,h3{letter-spacing:-.025em}
-[data-testid="stChatMessage"]{border:1px solid #dce7f4;border-radius:14px}
-.stButton>button{border-radius:10px;min-height:44px}
-.kicker{font-size:.75rem;letter-spacing:.14em;color:#2F6FC5;font-weight:700}
-</style>''',unsafe_allow_html=True)
-s=st.session_state
-for key,value in {'stage':0,'completed':[],'rounds':{},'notice':None}.items():
-    if key not in s:s[key]=value
+"""TP NextGen Chatbot Arcade: four inspect-and-repair challenges.
 
-def stage_data(n):
+All responses are deterministic and local. No generative AI API is used.
+"""
+import streamlit as st
+from engine import TITLES, LESSONS, new_round, respond, guidance, is_complete, checkpoint, restore_checkpoint
+from play import render_freeplay
+
+st.set_page_config(page_title='Chatbot Arcade | TP NextGen', page_icon='🧋', layout='wide', initial_sidebar_state='collapsed')
+st.markdown('''<style>
+:root{--tp:#245a9b;--navy:#15385c;--ice:#eaf4ff}
+.block-container{max-width:1080px;padding-top:1.35rem;padding-bottom:3rem}
+h1{font-size:2.35rem!important;letter-spacing:-.035em;color:#214d82}h2{font-size:1.45rem!important;letter-spacing:-.025em}
+h3{font-size:1.13rem!important}p,li{line-height:1.52}
+[data-testid="stChatMessage"]{border:1px solid #dce7f4;border-radius:14px;padding:.5rem}
+.stButton button{min-height:44px;border-radius:11px;font-weight:650}
+.hero{background:linear-gradient(115deg,#214e8d,#1877af);color:#fff;padding:19px 24px;border-radius:16px;margin-bottom:12px}
+.hero h2,.hero p{color:white!important;margin:0}.hero .eyebrow{letter-spacing:.1em;font-size:.74rem;font-weight:800;color:#dcecff}
+.rule{background:#eff6fd;border-left:5px solid #288dd1;border-radius:9px;padding:14px 17px;color:#153b66;margin:9px 0}
+.question{background:#fff8eb;border-left:5px solid #eda83d;border-radius:9px;padding:12px 16px;margin:10px 0}
+.good{background:#e8f7ef;border-left:5px solid #279e73;border-radius:8px;padding:11px 15px;margin:9px 0}
+.smallcaps{font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#336fad}
+.caption{font-size:.85rem;color:#48617d}
+</style>''',unsafe_allow_html=True)
+
+s=st.session_state
+for k,v in {'stage':0,'completed':[],'rounds':{},'notice':None}.items():
+    if k not in s:s[k]=v
+
+def rd(n):
     if n not in s.rounds:s.rounds[n]=new_round(n)
     return s.rounds[n]
-def go(n):
+def advance(n):
     if 0<=n<=min(len(s.completed),4):s.stage=n
 
-def send(text):
-    text=text.strip()[:300]
-    if not text:return
-    n=s.stage;r=stage_data(n)
-    reply,state=respond(text,r['state'],n,r['repaired'])
+def say(value):
+    value=(value or '').strip()[:300]
+    if not value:return
+    n=s.stage;r=rd(n)
+    answer,state=respond(value,r['state'],n,r['repaired'])
     r['state']=state
-    r['messages']=(r['messages']+[{'role':'user','content':text},{'role':'assistant','content':reply}])[-30:]
+    r['messages']=(r['messages']+[{'role':'user','content':value},{'role':'assistant','content':answer}])[-28:]
     if is_complete(n,r) and n not in s.completed:s.completed=sorted(s.completed+[n])
 
-def send_draft(n):
-    send(s.get(f'draft{n}', ''))
+def send_typed(n):say(s.get(f'entry{n}',''))
 
-def repair():
-    r=stage_data(s.stage);r['repaired']=True
-    r['messages'].append({'role':'assistant','content':{1:'Memory enabled. I will keep the other details when you change part of your order.',2:'Clarification enabled. I will ask which sugar level you mean.',3:'Menu checking enabled. I will only offer items from our menu.'}[s.stage]})
+def repair_rule():
+    n=s.stage;r=rd(n)
+    r['repaired']=True
+    changes={
+        0:'NEW RULE: Recognise common polite ways of asking for milk tea, not just one exact command.',
+        1:'NEW RULE: Update only the detail that changed. Keep the rest of the order.',
+        2:'NEW RULE: If the sugar preference is unclear, ask the customer to choose a percentage.',
+        3:'NEW RULE: Before accepting a drink, check whether it appears on the menu.'}
+    r['messages'].append({'role':'assistant','content':changes[n]})
 
-def replay():
-    s.rounds[s.stage]=new_round(s.stage)
-    s.notice='This stage has restarted. Previously earned stamps are kept.'
+def restart():s.rounds[s.stage]=new_round(s.stage)
 def reset_all():s.clear()
 
-st.markdown('<div class="kicker">TEMASEK POLYTECHNIC · SCHOOL OF INFORMATICS & IT · APPLIED AI</div>',unsafe_allow_html=True)
-st.title('Chatbot Arcade: Fix Sip Bot')
-st.write('Four short challenges, then your own bubble-tea counter. Work with your partner on one laptop. Swap who controls the keyboard after each stage.')
-st.caption('DAY 1 · 26 OCTOBER 2026 · Suggested play time: 25–30 minutes. The drinks counter at the end is optional if you need more time in Conferbot.')
-nav=st.columns(4)
-for n,col in enumerate(nav):
-    with col:
-        status='✓ Complete' if n in s.completed else '● You are here' if n==s.stage else 'Next' if n==len(s.completed) else 'Locked'
-        st.button(f'{n+1}. {TITLES[n]}',key=f'nav{n}',disabled=n>len(s.completed),type='primary' if n==s.stage else 'secondary',width='stretch',on_click=go,args=(n,))
-        st.caption(status)
-st.progress(len(s.completed)/4,text=f'{len(s.completed)} of 4 stages complete')
-if s.notice:st.info(s.notice);s.notice=None
-with st.sidebar:
-    st.subheader('Game menu')
-    st.caption('Rule-based chatbot simulation. No AI model or external account is needed.')
-    st.write('**Six flavours**\n\nMilk tea · Lychee tea · Lemon tea · Taro milk tea · Matcha milk tea · Brown sugar milk tea')
-    st.write('**Sugar**\n\n0%, 25%, 50%, 75%, 100%')
-    st.write('**Ice**\n\nNormal, less, none or extra')
-    st.write('**Extras**\n\nRegular or large. Up to two toppings: pearls, pudding, grass jelly, aloe vera or coconut jelly.')
-    st.divider()
-    st.download_button('Save checkpoint',checkpoint(s.completed,s.stage),'chatbot-arcade-checkpoint.json','application/json',width='stretch')
-    st.caption('Saves completed stages. After a refresh, load it below. Chats, unfinished stages and counter customisations restart.')
-    with st.expander('Load a checkpoint'):
-        uploaded=st.file_uploader('Choose your saved JSON',type=['json'])
-        if st.button('Load checkpoint',disabled=uploaded is None):
-            try:
-                if uploaded.size>4096:raise ValueError('That file is too large to be a checkpoint.')
-                completed,stage=restore_checkpoint(uploaded.getvalue())
-                s.completed=completed;s.stage=stage;s.rounds={}
-                for key in ['counter','served','customer','reveal_next','bot_name','bot_tone','flavour','size','sugar','ice','toppings','counter_draft']:
-                    s.pop(key,None)
-                s.notice='Checkpoint loaded. Completed stages are restored.'
-                st.rerun()
-            except ValueError as exc:st.error(str(exc))
-    with st.expander('Restart the whole game'):
-        checked=st.checkbox('Clear every stage and stamp')
-        st.button('Confirm full restart',disabled=not checked,on_click=reset_all)
-if s.stage==4:
-    st.success('Sip Bot is fixed. All four stages complete!')
-    render_freeplay()
-    with st.expander('Your four discoveries'):
-        for n in range(4):st.write(f'{n+1}. '+LESSONS[n])
-    st.button('Replay from stage 1',on_click=go,args=(0,))
+STAGES=[
+    {'short':'INTENT','color':'#3269af','goal':'One intention can be phrased in different ways.',
+     'question':'Why does “order milk tea” work, but “Can I get a milk tea please?” fail?',
+     'expected':'The original rule checks for exactly one phrase. Both messages express the same intention: ordering milk tea.',
+     'before':'IF message is exactly “order milk tea” → accept; OTHERWISE → reject.',
+     'options':['Accept any sentence as a drink order','Add common alternative phrases to the matching rule','Make the bot always say “I do not understand”'],
+     'correct':1,'after':'IF a message expresses a known milk tea request → accept; otherwise ask for clarification.'},
+    {'short':'MEMORY','color':'#8c56ac','goal':'Changing one detail should not erase the rest.',
+     'question':'After setting 25% sugar, why did the selected drink disappear?',
+     'expected':'The broken system overwrote the whole stored order rather than updating the sugar field only.',
+     'before':'new_order = {sugar: 25%}  (all earlier fields disappear)',
+     'options':['Delete the order each time a user speaks','Guess a different drink after every message','Update only the changed field and preserve the other fields'],
+     'correct':2,'after':'order[sugar] = 25%  (the original drink stays saved)'},
+    {'short':'CLARIFICATION','color':'#d28b29','goal':'Do not guess when the request is unclear.',
+     'question':'Why is “less sweet” not enough information for the bot?',
+     'expected':'Different customers mean different sugar percentages. Ask a follow-up question rather than guessing 50%.',
+     'before':'IF user says “less sweet” → choose 50% automatically.',
+     'options':['Always set sugar to 50%','Ask which listed sugar percentage the customer wants','Cancel every order'],
+     'correct':1,'after':'IF sugar level is unclear → ask: 0%, 25%, 50%, 75% or 100%?'},
+    {'short':'VALIDATION','color':'#248b79','goal':'Accept only options that actually exist.',
+     'question':'Why does the broken bot accept a durian milkshake?',
+     'expected':'It fails to check the order against its menu. Valid input must match an available item.',
+     'before':'IF user names a drink → accept it, even when unavailable.',
+     'options':['Accept the request and hope the shop has it','Check the menu before confirming the drink','Add every imaginary drink to the menu'],
+     'correct':1,'after':'IF drink is on the menu → accept; ELSE → explain and show alternatives.'}
+]
 
+st.markdown('<div class="smallcaps">TEMASEK POLYTECHNIC · SCHOOL OF INFORMATICS & IT · APPLIED AI</div>', unsafe_allow_html=True)
+st.title('Chatbot Arcade 🧋')
+st.caption('DAY 1 • Work in pairs, one laptop per pair • Four short challenges, about 25–30 minutes • No real orders or personal data')
+
+if s.stage==4:
+    st.success('All four stages finished. You inspected and repaired four chatbot rules!')
+    st.markdown('### What is happening under the hood?')
+    for i,meta in enumerate(STAGES):
+        st.write(f'**{i+1}. {meta["short"]}:** {meta["expected"]}')
+    if st.toggle('Open optional drinks counter',value=False):render_freeplay()
+    st.markdown('### Next stop: Conferbot')
+    st.write('The arcade simulates a rule-based bot. In Conferbot, you will generate, inspect and **manually connect a new node** in a conversation flow.')
+    st.link_button('Open Conferbot','https://www.conferbot.com/')
+    st.info('Use the Day 1 worksheet prompt for your Conferbot chatbot. The arcade menu is different from the worksheet menu.')
+    st.button('Review Stage 1',on_click=advance,args=(0,))
 else:
-    n=s.stage;r=stage_data(n)
-    instruction,suggestions,repair_label=guidance(n,r);complete=is_complete(n,r)
-    st.subheader(f'Stage {n+1} of 4: {TITLES[n]}')
-    if complete:st.success('Stage complete. '+LESSONS[n])
-    else:st.info('Your next move: '+instruction)
-    render_menu()
-    chat,card=st.columns([2.1,1],gap='large')
-    with card:
-        with st.container(border=True):
-            st.markdown('**Sip Bot’s order card**');order=r['state']['order']
-            st.write('Drink: '+order.get('drink','Not set'));st.write('Sugar: '+order.get('sugar','Not set'));st.write('Ice: '+order.get('ice','Not set'))
-            st.write('Size: '+order.get('size','regular'))
-            st.write('Toppings: '+(', '.join(order.get('toppings',[])) or 'none'))
-            st.caption('Size defaults to regular. Toppings default to none.')
-            st.caption('Confirmed' if r['state']['confirmed'] else 'Not confirmed')
-        if n>0:
-            feature={1:'Memory',2:'Clarification',3:'Menu checking'}[n]
-            st.markdown(f'**{feature}: {"ON" if r["repaired"] else "OFF"}**')
-            if repair_label and not complete:st.button(repair_label,key=f'repair{n}',type='primary',width='stretch',on_click=repair)
-            elif not r['repaired']:st.caption('Try the conversation first. The repair button appears after you see the problem.')
-        if n==1:st.caption('Target order: lychee tea, 25% sugar, no ice.')
-        elif n==2:st.caption('“Less sweet” does not name an exact sugar level. Your preferred level is 25%.')
-        elif n==3:st.caption('Durian milkshake is deliberately missing from today’s menu.')
-        st.button('Restart this stage',key=f'replay{n}',on_click=replay,width='stretch')
-        st.caption('Replays keep earned stamps. Only this chat and order are cleared.')
-    with chat:
-        st.caption('Latest exchange')
-        with st.container(border=True):
-            for msg in r['messages'][-2:]:
-                with st.chat_message(msg['role'],avatar='💬' if msg['role']=='assistant' else '🙂'):st.write(msg['content'])
-        if len(r['messages'])>2:
-            with st.expander('Earlier messages: compare before and after'):
-                for msg in r['messages'][:-2]:
-                    st.markdown('**'+('Sip Bot' if msg['role']=='assistant' else 'You')+'**')
-                    st.write(msg['content'])
-        if not complete and suggestions:
-            st.markdown('**Try a message**');st.caption('Click to send immediately. You can also type your own message below.')
-            for i,text in enumerate(suggestions):st.button('Send: '+text,key=f'suggest{n}_{i}_{text}',on_click=send,args=(text,),width='stretch')
-        elif repair_label and not complete:st.caption('Use the repair button next to the chat, then send another message.')
-        with st.form(f'compose{n}',clear_on_submit=True):
-            draft=st.text_input('Or write your own',max_chars=300,placeholder='Type here, then press Enter or Send',key=f'draft{n}')
-            st.form_submit_button('Send message',width='stretch',on_click=send_draft,args=(n,))
-        if not complete:
-            with st.expander('Why did the bot say that?'):
-                st.write({0:'This version recognises “order milk tea” exactly. A person would recognise many other ways to ask.',1:'With memory off, each new order detail replaces the previous details. With memory on, it updates only the part you mention.',2:'With clarification off, the bot picks 50%. With it on, the bot asks you to choose.',3:'With menu checking off, this deliberately broken demo accepts an unavailable item. With checking on, it offers the actual menu.'}[n])
-    if (complete or n in s.completed) and n>0:
-        with st.expander('Play a little: try an extra before moving on'):
-            st.caption('Your earned stage stamp stays. The next button remains available.')
-            for text in ['Add pearls','Make it large','Remove pearls','Show my order']:
-                st.button('Send: '+text,on_click=send,args=(text,),key=f'extra{n}_{text}')
-    if complete or n in s.completed:
-        st.button('Finish the game →' if n==3 else f'Next: Stage {n+2} →',type='primary',width='stretch',on_click=go,args=(n+1,))
-        if not complete:st.caption('You already completed this stage earlier, so you can continue or finish the replay.')
-st.caption('Practice game only. No real orders, payments or customer data. There is no speed score.')
+    n=s.stage;r=rd(n);meta=STAGES[n];complete=is_complete(n,r)
+    st.progress(len(s.completed)/4, text=f'Completed: {len(s.completed)} / 4 stages')
+    st.markdown(f'<div class="hero" style="background:linear-gradient(108deg,#214d82,{meta["color"]})"><span class="eyebrow">STAGE {n+1} OF 4 · {meta["short"]}</span><h2>{TITLES[n]}</h2><p>{meta["goal"]}</p></div>',unsafe_allow_html=True)
+    st.markdown('**Your mission:** Try the suggested messages, notice what goes wrong, choose a rule to fix, then send the same request again.')
+    a,b=st.columns([1.2,1],gap='large')
+    with a:
+        st.subheader('1 · Try the chatbot')
+        for msg in r['messages'][-5:]:
+            with st.chat_message(msg['role'],avatar='🧋' if msg['role']=='assistant' else '🙂'):st.write(msg['content'])
+        instruction,suggestions,_=guidance(n,r)
+        if not complete:st.caption('NEXT: '+instruction)
+        if suggestions and not complete:
+            for i,t in enumerate(suggestions):st.button('Send: '+t, key=f'suggest{n}_{i}',on_click=say,args=(t,),width='stretch')
+        with st.form(f'form{n}',clear_on_submit=True):
+            st.text_input('Or type a message',max_chars=300,key=f'entry{n}',placeholder='What would you say to the bot?')
+            st.form_submit_button('Send my message',on_click=send_typed,args=(n,),width='stretch')
+        if n in (1,2,3):
+            order=r['state']['order']
+            with st.expander('See the bot’s stored order',expanded=n==1):
+                st.write('**Drink:** '+order.get('drink','Not saved'))
+                st.write('**Sugar:** '+order.get('sugar','Not saved'))
+                st.write('**Ice:** '+order.get('ice','Not saved'))
+                st.caption('This is the bot’s memory, not another question you need to answer.')
+    with b:
+        st.subheader('2 · Inspect the rule')
+        st.markdown('<div class="smallcaps">BEFORE THE FIX</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="rule">{meta["before"]}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="question"><b>Discuss with your partner</b><br>{meta["question"]}</div>',unsafe_allow_html=True)
+        ev=set(r['state']['events'])
+        seen_problem=(('different_words' in ev and 'exact' in ev) if n==0 else ['forgot' in ev,'guessed_sugar' in ev,'invented' in ev][n-1])
+        if seen_problem or r['repaired']:
+            if not r['repaired']:
+                st.markdown('**3 · Choose a better rule**')
+                selected=st.radio('Which change would fix this?',meta['options'],index=None,key=f'fix_choice{n}')
+                if st.button('Apply this rule',type='primary',key=f'fix{n}',width='stretch'):
+                    if selected==meta['options'][meta['correct']]:
+                        repair_rule();st.rerun()
+                    else:st.error('Not quite. Consider which rule directly fixes the behaviour you observed.')
+            else:
+                st.markdown('<div class="smallcaps">AFTER THE FIX</div>',unsafe_allow_html=True)
+                st.markdown(f'<div class="good">{meta["after"]}</div>',unsafe_allow_html=True)
+                st.caption('Now test the same request again. A fix only counts when the behaviour changes.')
+        else:st.info('Send the example messages until you have seen the problem. Then you can change the rule.')
+        if complete:
+            st.success('Stage completed!')
+            with st.expander('Expected result and explanation',expanded=True):
+                st.write(meta['expected'])
+                st.write('**Computing connection:** '+['Intent / pattern matching','Variables / state','Selection / clarification','Input validation'][n])
+            st.button('Finish the stages →' if n==3 else 'Go to next stage →',type='primary',width='stretch',on_click=advance,args=(n+1,))
+        else:
+            with st.expander('Need a hint?'):st.write('Look for what is missing from the bot’s decision rule. Can it use another phrase, keep a saved value, ask a question or check valid inputs?')
+    st.divider()
+    x,y=st.columns([1,1])
+    with x:st.button('Restart this stage',on_click=restart,width='stretch')
+    with y:
+        if n in s.completed:st.button('Continue to next stage →',on_click=advance,args=(n+1,),width='stretch')
+    with st.expander('Game settings / restore a completed-stage checkpoint'):
+        st.download_button('Save progress checkpoint',checkpoint(s.completed,s.stage),'chatbot-arcade-checkpoint.json','application/json')
+        up=st.file_uploader('Load a saved checkpoint',type=['json'])
+        if st.button('Load saved checkpoint',disabled=up is None):
+            try:
+                cm,sg=restore_checkpoint(up.getvalue());s.completed=cm;s.stage=sg;s.rounds={};st.rerun()
+            except ValueError as exc:st.error(str(exc))
+        if st.checkbox('I want to restart the entire game'):st.button('Clear all progress',on_click=reset_all)
+
+st.caption('A classroom simulation of a rule-based chatbot. It does not use an AI language model. The rules are simplified for learning.')

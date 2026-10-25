@@ -1,48 +1,52 @@
-# Chatbot Arcade | TP Applied AI | 26 October 2026
+# TP NextGen Chatbot Arcade
 
-A local, deterministic chatbot game for the first day of the Temasek Polytechnic secondary-school chatbot workshop. It works without a model API or learner login. After the four challenges, pairs unlock a bubble-tea counter and can copy a **Conferbot** starter prompt.
-
-## Workshop flow
-
-- **Day 1 (26 Oct):** Spend approximately 25–30 minutes on the arcade in pairs. Complete the four fixes; free-play is optional. Move to the Conferbot Day 1 worksheet and create an ordering chatbot.
-- **Day 2 (27 Oct):** Continue with Conferbot using the Day 2 worksheet to build each pair's own idea and show selected chatbots in a short presentation.
-- **Device policy:** One laptop per pair. Swap who controls the keyboard after each stage. Do not exchange devices with other pairs.
+**Workshop:** 26 October 2026, Day 1 · Temasek Polytechnic School of Informatics & IT. Students work in pairs on one laptop.
 
 ## Deploy to Streamlit Community Cloud
 
-1. Unzip this package.
-2. Put **the contents of the `chatbot_arcade` folder** into the root of your GitHub repository, retaining `.streamlit/config.toml`.
-3. In Streamlit Community Cloud, choose **Create app**, select the repository and branch, and set the entrypoint to `app.py`.
-4. Deploy. No API keys or secrets are needed.
-5. Test the four stages and the Conferbot reveal on a student laptop before the class.
+1. Unzip this archive and put the contents of `chatbot_arcade/` in the **root of your GitHub repository**. Include `.streamlit/config.toml`.
+2. On Streamlit Community Cloud, choose `app.py` as the entry point and deploy. No API keys or database are required.
+3. Open the deployed app from an incognito/student browser. Your existing public URL is `https://chatbotarcade.streamlit.app/`; updating this code in its connected repository is required to replace the existing version.
+4. In the app, try all four stages, each with a broken rule, a user-selected fix, and the same request retested.
 
-Local dry-run: `pip install -r requirements.txt` then `streamlit run app.py`.
+## What students do
 
-## Controls and safeguards
+**Stage 1 — Intent:** "Can I get a milk tea please?" fails, "order milk tea" works. Choose to recognise alternative request phrases. Retest natural phrasing.
 
-- All four stages are rule-based, not an LLM demonstration.
-- Only fictional drink orders are used; no real payments or personal data.
-- Free play has six drinks, two sizes, five sugar levels, four ice options and five toppings (up to two per order).
-- Each browser session has its own in-memory state. Refreshes may restart progress; the checkpoint file can restore earned stages, but not chats or counter recipes.
-- The final reveal points to **Conferbot**, not Voiceflow.
-- Starter prompt is under 900 characters for short description fields. The longer flow checklist is optional and is **not** intended to be pasted into the same description field.
-- Conferbot's interface, plan limits and generated flows may change. Students should use the visual editor and Preview to correct mistakes rather than assuming generation is perfect.
+**Stage 2 — Memory:** Set lychee tea then 25% sugar. The bot loses the earlier choice. Choose to update only a changed field, rebuild the order, choose no ice, confirm.
 
-## How to test
+**Stage 3 — Clarification:** "Less sweet" is guessed as 50%. Choose to ask for an exact percentage and confirm 25%.
 
-Run `python -m unittest -v test_arcade.py`. The test file checks stage gating, typed inputs, repair logic, checkpoints, drink editing, session isolation, customisation and the Conferbot reveal. This package has not been deployed to your Streamlit account.
+**Stage 4 — Validation:** The bot accepts an unavailable durian milkshake. Choose to check against the menu and confirm the same request is now refused.
 
-## Stage answers for the facilitator
+Every stage shows an **Under the Hood** rule, a discussion question and a success explanation. Progress unlocks the next stage. An optional drinks counter is available after all four stages. Do not spend workshop time on free play if the students need more time in Conferbot.
 
-1. **Words matter:** `Can I get a milk tea please?` followed by `order milk tea`.
-2. **Remember my order:** `Lychee tea` then `25% sugar`, enable memory, redo `Lychee tea`, `Actually, no ice`, and `Confirm`.
-3. **Ask, don’t guess:** `Less sweet please`, enable clarification, repeat it and answer `25% sugar`.
-4. **Stick to the menu:** Ask for a `durian milkshake`, enable menu checking, ask again.
+## Important distinction
 
-## File map
+This is a deterministic, deliberately simplified **rule-based chatbot simulator**, not a generative language model. A correct fix changes the rule that controls future responses. The user’s actual Day 1 chatbot is built with **Conferbot**, following the separate Day 1 worksheet and its five-drink/three-size specification. The arcade’s six-flavour menu is not the Conferbot specification.
 
-- `app.py`: game layout, guided stages, checkpoint UI.
-- `engine.py`: deterministic replies, validation, stage completion, copyable Conferbot prompt.
-- `play.py`: recipe builder, SVG cup preview, optional customer challenges, Conferbot reveal.
-- `test_arcade.py`: automated tests.
-- `.streamlit/config.toml`: TP-inspired blue theme.
+## Teaching goals and expected answers
+
+| Stage | What went wrong? | Expected explanation |
+| --- | --- | --- |
+| Intent | Exact phrase only | Several requests can express one intent |
+| Memory | Previous fields vanish | Update one value without overwriting all stored state |
+| Clarification | Bot guesses at an ambiguous request | Ask a follow-up question |
+| Validation | Unavailable item accepted | Check user input against accepted values |
+
+Related G3 Computing concepts: inputs/outputs; flowchart sequence and selection; variables; IF/THEN rules; testing and debugging; iterative development (MOE G3 Computing syllabus 7155).
+
+## Files
+
+- `app.py`: Streamlit classroom interface and stage progression.
+- `engine.py`: deterministic parsing, state transitions and events.
+- `play.py`: optional drinks counter after stage completion.
+- `test_engine_smoke.py`: dependency-free regression tests. Run `python -m unittest test_engine_smoke.py -v`.
+- `test_arcade.py`: optional Streamlit AppTest checks. Run `python -m unittest test_arcade.py -v` after installing requirements.
+- `.streamlit/config.toml`: theme settings.
+
+## Correctness / classroom preflight
+
+Run the unit tests, then start `streamlit run app.py`. Check stage-by-stage: the correct rule becomes available only after seeing a bug; a wrong rule is rejected; the same input works differently after fixing; no stage unlocks early; Replay does not erase completed stamps; no chatbot asks for real data.
+
+The optional drinks counter uses local session state. Refreshed sessions may reset local progress; students can export/import a completed-stage checkpoint from Game Settings. This is a no-payment, no-personal-data classroom activity.

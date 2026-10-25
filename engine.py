@@ -32,8 +32,11 @@ def respond(text,state,stage,repaired=False):
     if stage==0:
         if t=='order milk tea':
             state['order']={'drink':'milk tea'}
-            return done('Milk tea added. I understood that exact command. My matching rule missed the other wording.','exact')
-        return done('Sorry, I did not understand that wording. My supported command is “order milk tea”. Try it next.','different_words')
+            return done('Milk tea added. The exact command works.','exact')
+        if repaired and ('milk tea' in t and any(word in t for word in ['can i get','one','i want','please','could i have','i would like'])):
+            state['order']={'drink':'milk tea'}
+            return done('Milk tea added! I can now recognise another way of asking.','matched_rephrase')
+        return done('Sorry, I do not recognise that sentence yet. The current rule only matches “order milk tea”.','different_words')
     if t in ['menu','show menu','what do you sell','what is on the menu',"what's on the menu"]:
         return done('Drinks: '+', '.join(MENU)+'. Sizes: regular or large. Sugar: '+', '.join(SUGARS)+'. Ice: '+', '.join(ICE)+'. Choose up to two toppings: '+', '.join(TOPPINGS)+'.')
     if t in ['hi','hello','hey']:return done('Hi! Choose a drink, or tell me what to change in your order.')
@@ -108,7 +111,7 @@ def respond(text,state,stage,repaired=False):
     return done(reply,'forgot' if lost else 'kept' if kept else None)
 def is_complete(stage,r):
     st=r['state'];e=set(st['events'])
-    if stage==0:return {'different_words','exact'}<=e
+    if stage==0:return r['repaired'] and {'different_words','exact','matched_rephrase'}<=e
     if stage==1:return r['repaired'] and {'forgot','kept'}<=e and st['confirmed'] and all(st['order'].get(k)==v for k,v in {'drink':'lychee tea','sugar':'25%','ice':'no ice'}.items())
     if stage==2:return r['repaired'] and {'guessed_sugar','clarified_sugar'}<=e and st['order'].get('sugar')=='25%' and st['pending'] is None
     return r['repaired'] and {'invented','refused'}<=e
@@ -117,8 +120,9 @@ def guidance(stage,r):
     e=set(r['state']['events']);order=r['state']['order'];fixed=r['repaired']
     if stage==0:
         if 'different_words' not in e:return 'Ask naturally first.',['Can I get a milk tea please?','One bbt please'],None
-        if 'exact' not in e:return 'Now try the wording that the bot recognises.',['order milk tea'],None
-        return 'You found the exact-match limitation.',['One milk tea please'],None
+        if 'exact' not in e:return 'Try the exact command to see why it works.',['order milk tea'],None
+        if not fixed:return 'Add an alternative accepted phrase, then test it again.',[],'Add alternative phrase'
+        return 'Try the natural sentence again after changing the rule.',['Can I get a milk tea please?'],None
     if stage==1:
         if 'forgot' not in e:
             if not order:return 'First, tell the bot which drink you want.',['Lychee tea'],None
